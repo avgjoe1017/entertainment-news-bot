@@ -277,6 +277,46 @@ def fetch_rss_feed(source_name, feed_url, session):
         health_status["failed_sources"][source_name] = error_msg
         return []
 
+def process_article_for_api(article):
+    """Ensure an article has all required fields for the frontend"""
+    # Create a copy to avoid modifying the original
+    processed = article.copy()
+    
+    # Ensure required fields exist
+    if 'id' not in processed:
+        processed['id'] = generate_article_hash(processed.get('title', ''), processed.get('link', ''))
+    
+    if 'categories' not in processed:
+        processed['categories'] = ["General"]
+    elif not isinstance(processed['categories'], list):
+        processed['categories'] = [processed['categories']]
+    
+    if 'breaking_news' not in processed:
+        processed['breaking_news'] = False
+    
+    if 'sentiment' not in processed:
+        processed['sentiment'] = 'neutral'
+    
+    if 'image_url' not in processed:
+        processed['image_url'] = None
+    
+    # Ensure title, summary, and other text fields are strings
+    for field in ['title', 'summary', 'source']:
+        if field not in processed:
+            processed[field] = ""
+        elif processed[field] is None:
+            processed[field] = ""
+    
+    # Ensure link is valid
+    if 'link' not in processed or not processed['link']:
+        processed['link'] = "#"
+    
+    # Validate dates
+    if 'published_date' not in processed or not processed['published_date']:
+        processed['published_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    return processed
+
 def deduplicate_articles(articles):
     """Remove duplicate articles based on content similarity"""
     global duplicate_count
@@ -467,8 +507,12 @@ def update_feeds():
                 non_breaking = [a for a in unique_articles if not a['breaking_news']]
                 prioritized_articles = breaking_news + non_breaking
                 
+                # Process articles for API consistency
+                prioritized_articles = [process_article_for_api(a) for a in prioritized_articles]
+                
                 # Update trending articles
                 trending_articles = update_trending_score(unique_articles.copy())
+                trending_articles = [process_article_for_api(a) for a in trending_articles]
                 
                 # Update source statistics
                 update_source_stats(unique_articles)
@@ -498,8 +542,6 @@ def update_feeds():
             logger.error(f"Error in update thread: {str(e)}")
             time.sleep(15)  # Sleep and try again even if there's an error
 
-# Fix the response structure in the API endpoints
-
 @app.route('/rss', methods=['GET'])
 def get_rss():
     """API endpoint to get the latest RSS feed data with filtering options"""
@@ -526,6 +568,9 @@ def get_rss():
         else:
             current_cache = feed_cache.copy()
     
+    # Debug: Log cache size
+    logger.info(f"Cache size: {len(current_cache)} articles before filtering")
+    
     # Apply filters
     filtered_articles = current_cache
     
@@ -549,21 +594,33 @@ def get_rss():
     
     # Calculate total results and pages
     total_results = len(filtered_articles)
-    total_pages = max(1, (total_results + page_size - 1) // page_size)
+    total_pages = max(1, (total_results + page_size - 1) // page_size) if total_results > 0 else 1
     
     # Apply pagination
-    start_idx = (page - 1) * page_size
-    end_idx = start_idx + page_size
-    paginated_articles = filtered_articles[start_idx:end_idx]
+    start_idx = min((page - 1) * page_size, total_results) if total_results > 0 else 0
+    end_idx = min(start_idx + page_size, total_results)
+    paginated_articles = filtered_articles[start_idx:end_idx] if total_results > 0 else []
     
     # Make sure articles are fully populated
     for article in paginated_articles:
         # Ensure categories is always a list
         if 'categories' not in article:
             article['categories'] = ["General"]
+        elif not isinstance(article['categories'], list):
+            article['categories'] = [article['categories']]
+            
         # Ensure breaking_news is always present
         if 'breaking_news' not in article:
             article['breaking_news'] = False
+            
+        # Ensure other required fields are present
+        if 'sentiment' not in article:
+            article['sentiment'] = 'neutral'
+        if 'image_url' not in article:
+            article['image_url'] = None
+    
+    # Debug: Log how many articles are being returned
+    logger.info(f"Returning {len(paginated_articles)} articles after filtering and pagination")
     
     return jsonify({
         'status': 'success',
@@ -588,9 +645,20 @@ def get_trending():
         # Ensure categories is always a list
         if 'categories' not in article:
             article['categories'] = ["General"]
+        elif not isinstance(article['categories'], list):
+            article['categories'] = [article['categories']]
+            
         # Ensure breaking_news is always present
         if 'breaking_news' not in article:
             article['breaking_news'] = False
+            
+        # Ensure other required fields are present
+        if 'sentiment' not in article:
+            article['sentiment'] = 'neutral'
+        if 'image_url' not in article:
+            article['image_url'] = None
+    
+    logger.info(f"Returning {len(current_trending)} trending articles")
     
     return jsonify({
         'status': 'success',
@@ -598,7 +666,6 @@ def get_trending():
         'count': len(current_trending),
         'articles': current_trending
     })
-
 
 @app.route('/categories', methods=['GET'])
 def get_categories():
@@ -627,9 +694,20 @@ def get_category(category):
         # Ensure categories is always a list
         if 'categories' not in article:
             article['categories'] = [category]
+        elif not isinstance(article['categories'], list):
+            article['categories'] = [article['categories']]
+            
         # Ensure breaking_news is always present
         if 'breaking_news' not in article:
             article['breaking_news'] = False
+            
+        # Ensure other required fields are present
+        if 'sentiment' not in article:
+            article['sentiment'] = 'neutral'
+        if 'image_url' not in article:
+            article['image_url'] = None
+    
+    logger.info(f"Returning {len(articles)} articles for category: {category}")
     
     return jsonify({
         'status': 'success',
@@ -652,6 +730,16 @@ def get_breaking():
         # Ensure categories is always a list
         if 'categories' not in article:
             article['categories'] = ["General"]
+        elif not isinstance(article['categories'], list):
+            article['categories'] = [article['categories']]
+            
+        # Ensure other required fields are present
+        if 'sentiment' not in article:
+            article['sentiment'] = 'neutral'
+        if 'image_url' not in article:
+            article['image_url'] = None
+    
+    logger.info(f"Returning {len(breaking_articles)} breaking news articles")
     
     return jsonify({
         'status': 'success',
@@ -706,6 +794,9 @@ def api_docs():
         'updated_every': '15 seconds',
         'endpoints': {
             '/rss': {
+                'description': 'Get the latest entertainment news with filtering options',
+                'parameters': {
+                    ''/rss': {
                 'description': 'Get the latest entertainment news with filtering options',
                 'parameters': {
                     'source': 'Filter by news source',
