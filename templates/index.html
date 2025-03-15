@@ -185,6 +185,7 @@
         let totalPages = 1;
         let currentCategory = 'all';
         let currentSearchQuery = '';
+        let currentSourceFilter = null;
         
         // DOM Elements
         const newsContainer = document.getElementById('news-container');
@@ -240,9 +241,10 @@
                 button.classList.add('bg-purple-600', 'text-white');
                 button.classList.remove('hover:bg-gray-200');
                 
-                // Update current category
+                // Update current category and reset other filters
                 currentCategory = button.dataset.category;
                 currentPage = 1;
+                currentSourceFilter = null;
                 
                 // Fetch news
                 fetchNews();
@@ -283,37 +285,50 @@
         async function fetchSources() {
             try {
                 const response = await fetch(`${API_ENDPOINT}/sources`);
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status}`);
+                }
                 const data = await response.json();
                 
+                console.log("Sources data:", data);
+                
                 // Update source count
-                sourceCountEl.textContent = Object.keys(data.sources).length;
+                sourceCountEl.textContent = Object.keys(data.sources || {}).length;
                 
                 // Populate dropdown
                 sourcesDropdown.innerHTML = '';
-                Object.entries(data.sources).forEach(([name, url]) => {
-                    const sourceItem = document.createElement('div');
-                    sourceItem.className = 'px-3 py-2 hover:bg-gray-100 cursor-pointer rounded-md';
-                    sourceItem.textContent = name;
-                    sourceItem.addEventListener('click', () => {
-                        // Set current category to 'all' but filter by source
-                        currentCategory = 'all';
-                        fetchNews(name);
-                        
-                        // Update UI to show All News is selected
-                        document.querySelectorAll('.category-btn').forEach(btn => {
-                            btn.classList.remove('bg-purple-600', 'text-white');
-                            btn.classList.add('hover:bg-gray-200');
-                            if (btn.dataset.category === 'all') {
-                                btn.classList.add('bg-purple-600', 'text-white');
-                                btn.classList.remove('hover:bg-gray-200');
-                            }
+                
+                if (data.sources) {
+                    Object.entries(data.sources).forEach(([name, url]) => {
+                        const sourceItem = document.createElement('div');
+                        sourceItem.className = 'px-3 py-2 hover:bg-gray-100 cursor-pointer rounded-md';
+                        sourceItem.textContent = name;
+                        sourceItem.addEventListener('click', () => {
+                            // Set source filter and reset other filters
+                            currentSourceFilter = name;
+                            
+                            // Update UI to show All News is selected
+                            document.querySelectorAll('.category-btn').forEach(btn => {
+                                btn.classList.remove('bg-purple-600', 'text-white');
+                                btn.classList.add('hover:bg-gray-200');
+                                if (btn.dataset.category === 'all') {
+                                    btn.classList.add('bg-purple-600', 'text-white');
+                                    btn.classList.remove('hover:bg-gray-200');
+                                }
+                            });
+                            
+                            currentCategory = 'all';
+                            currentPage = 1;
+                            
+                            // Fetch news with source filter
+                            fetchNews();
+                            
+                            // Hide dropdown
+                            sourcesDropdown.classList.add('hidden');
                         });
-                        
-                        // Hide dropdown
-                        sourcesDropdown.classList.add('hidden');
+                        sourcesDropdown.appendChild(sourceItem);
                     });
-                    sourcesDropdown.appendChild(sourceItem);
-                });
+                }
             } catch (error) {
                 console.error('Error fetching sources:', error);
             }
@@ -353,14 +368,16 @@
         
         // Create article card
         function createArticleCard(article) {
+            console.log("Creating card for article:", article);
+            
             const card = document.createElement('div');
             card.className = 'article-card bg-white rounded-lg shadow-md overflow-hidden';
             if (article.breaking_news) {
                 card.classList.add('breaking-news');
             }
             
-            // Prepare image element
-            const imageUrl = article.image_url || '/static/placeholder-news.jpg';
+            // Prepare image element (with default if none available)
+            const imageUrl = article.image_url || '/static/placeholder-news.svg';
             
             // Prepare sentiment badge
             let sentimentBadge = '';
@@ -373,9 +390,11 @@
             }
             
             // Prepare categories
-            const categories = article.categories.map(category => 
-                `<span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded">${category}</span>`
-            ).join(' ');
+            const categories = Array.isArray(article.categories) 
+                ? article.categories.map(category => 
+                    `<span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded">${category}</span>`
+                  ).join(' ')
+                : '';
             
             card.innerHTML = `
                 <div class="h-48 bg-gray-200 relative">
@@ -384,11 +403,11 @@
                 </div>
                 <div class="p-4">
                     <div class="flex justify-between items-start mb-2">
-                        <div class="text-sm text-gray-600">${article.source}</div>
+                        <div class="text-sm text-gray-600">${article.source || 'Unknown Source'}</div>
                         <div class="text-xs text-gray-500">${formatDate(article.published_date)}</div>
                     </div>
-                    <h3 class="font-bold text-lg mb-2">${article.title}</h3>
-                    <p class="text-gray-700 text-sm mb-4">${article.summary}</p>
+                    <h3 class="font-bold text-lg mb-2">${article.title || 'No Title'}</h3>
+                    <p class="text-gray-700 text-sm mb-4">${article.summary || 'No summary available'}</p>
                     <div class="flex flex-wrap gap-1 mb-3">
                         ${sentimentBadge}
                         ${categories}
@@ -401,7 +420,7 @@
         }
         
         // Fetch news articles
-        async function fetchNews(sourceFilter = null) {
+        async function fetchNews() {
             // Show loading indicator
             loadingIndicator.classList.remove('hidden');
             newsContainer.classList.add('hidden');
@@ -423,9 +442,9 @@
                         break;
                     case 'all':
                         endpoint = '/rss';
-                        url = `${API_ENDPOINT}${endpoint}?page=${currentPage}`;
-                        if (sourceFilter) {
-                            url += `&source=${encodeURIComponent(sourceFilter)}`;
+                        url = `${API_ENDPOINT}${endpoint}?page=${currentPage}&size=30`;
+                        if (currentSourceFilter) {
+                            url += `&source=${encodeURIComponent(currentSourceFilter)}`;
                         }
                         if (currentSearchQuery) {
                             url += `&q=${encodeURIComponent(currentSearchQuery)}`;
@@ -437,14 +456,21 @@
                         break;
                 }
                 
+                console.log("Fetching URL:", url);
+                
                 const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log("API Response:", data);
                 
                 // Clear container
                 newsContainer.innerHTML = '';
                 
                 // Update breaking news banner
-                const breakingNews = data.articles.find(article => article.breaking_news);
+                const breakingNews = data.articles && data.articles.find(article => article.breaking_news);
                 if (breakingNews) {
                     breakingHeadline.textContent = breakingNews.title;
                     breakingLink.href = breakingNews.link;
@@ -454,20 +480,37 @@
                 }
                 
                 // Update results info
-                resultsCount.textContent = data.count || data.total_results || data.articles.length;
+                resultsCount.textContent = (data.count || data.total_results || (data.articles ? data.articles.length : 0)) || 0;
                 resultsInfo.classList.remove('hidden');
                 
                 // Update last updated time
-                lastUpdatedEl.textContent = data.timestamp;
+                if (data.timestamp) {
+                    lastUpdatedEl.textContent = new Date(data.timestamp).toLocaleString();
+                }
                 
                 // Update article count
-                articleCountEl.textContent = data.count || data.total_results || data.articles.length;
+                articleCountEl.textContent = (data.count || data.total_results || (data.articles ? data.articles.length : 0)) || 0;
                 
                 // Create article cards
-                data.articles.forEach(article => {
-                    const card = createArticleCard(article);
-                    newsContainer.appendChild(card);
-                });
+                if (data.articles && data.articles.length > 0) {
+                    data.articles.forEach(article => {
+                        try {
+                            const card = createArticleCard(article);
+                            newsContainer.appendChild(card);
+                        } catch (e) {
+                            console.error("Error creating card:", e, article);
+                        }
+                    });
+                } else {
+                    // No articles found
+                    newsContainer.innerHTML = `
+                        <div class="col-span-3 text-center py-12">
+                            <div class="text-gray-500 text-4xl mb-4"><i class="fas fa-newspaper"></i></div>
+                            <h3 class="text-xl font-bold mb-2">No Articles Found</h3>
+                            <p class="text-gray-600">Try a different category or search term.</p>
+                        </div>
+                    `;
+                }
                 
                 // Update pagination if available
                 if (data.total_pages) {
@@ -495,6 +538,7 @@
                         <div class="text-red-500 text-4xl mb-4"><i class="fas fa-exclamation-circle"></i></div>
                         <h3 class="text-xl font-bold mb-2">Error Loading News</h3>
                         <p class="text-gray-600">Sorry, we couldn't load the latest news. Please try again later.</p>
+                        <p class="text-gray-500 mt-2">${error.message}</p>
                     </div>
                 `;
                 newsContainer.classList.remove('hidden');
@@ -503,6 +547,8 @@
         
         // Initialize
         async function initialize() {
+            console.log("Initializing app...");
+            
             // Fetch sources first
             await fetchSources();
             
