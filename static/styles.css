@@ -1,0 +1,90 @@
+/* Additional styles for the Entertainment News Hub */
+
+/* Animations for breaking news */
+@keyframes pulse-border {
+    0% { border-color: rgba(239, 68, 68, 0.5); }
+    50% { border-color: rgba(239, 68, 68, 1); }
+    100% { border-color: rgba(239, 68, 68, 0.5); }
+}
+
+.breaking-border {
+    border: 2px solid rgba(239, 68, 68, 0.8);
+    animation: pulse-border 2s infinite;
+}
+
+/* Card hover effects */
+.article-card {
+    transition: all 0.3s ease;
+}
+
+.article-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Category pill styling */
+.category-pill {
+    border-radius: 9999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-block;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid transparent;
+}
+
+/* Sentiment indicators */
+.sentiment-positive {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: rgb(6, 95, 70);
+}
+
+.sentiment-negative {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: rgb(153, 27, 27);
+}
+
+.sentiment-neutral {
+    background-color: rgba(107, 114, 128, 0.1);
+    color: rgb(55, 65, 81);
+}
+
+/* Placeholder image styling */
+.placeholder-image {
+    background-color: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+}
+
+/* Loading animation */
+.loading-spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: #a855f7;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive tweaks */
+@media (max-width: 640px) {
+    .card-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .category-filters {
+        flex-wrap: wrap;
+    }
+    
+    .category-button {
+        margin-bottom: 0.5rem;
+    }
+}
