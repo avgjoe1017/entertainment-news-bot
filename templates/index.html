@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entertainment News Hub</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .breaking-news {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { background-color: rgba(239, 68, 68, 0.7); }
+            50% { background-color: rgba(239, 68, 68, 0.9); }
+            100% { background-color: rgba(239, 68, 68, 0.7); }
+        }
+        .article-card {
+            transition: transform 0.2s ease-in-out;
+        }
+        .article-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-700 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center mb-4 md:mb-0">
+                    <i class="fas fa-newspaper text-3xl mr-3"></i>
+                    <h1 class="text-3xl font-bold">Entertainment News Hub</h1>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="relative">
+                        <input type="text" id="search-input" placeholder="Search news..." 
+                            class="px-4 py-2 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-300 w-64">
+                        <button id="search-btn" class="absolute right-3 top-2 text-gray-500">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <button id="api-btn" class="bg-white text-purple-700 px-4 py-2 rounded-full font-medium hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-300">
+                        API Docs
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-2">
+            <div class="flex flex-wrap items-center space-x-1 md:space-x-4">
+                <button data-category="all" class="category-btn px-3 py-2 text-sm md:text-base rounded-md bg-purple-600 text-white">All News</button>
+                <button data-category="trending" class="category-btn px-3 py-2 text-sm md:text-base rounded-md hover:bg-gray-200">Trending</button>
+                <button data-category="breaking" class="category-btn px-3 py-2 text-sm md:text-base rounded-md hover:bg-gray-200">Breaking</button>
+                <button data-category="Movies" class="category-btn px-3 py-2 text-sm md:text-base rounded-md hover:bg-gray-200">Movies</button>
+                <button data-category="TV" class="category-btn px-3 py-2 text-sm md:text-base rounded-md hover:bg-gray-200">TV</button>
+                <button data-category="Music" class="category-btn px-3 py-2 text-sm md:text-base rounded-md hover:bg-gray-200">Music</button>
+                <button data-category="Celebrity" class="category-btn px-3 py-2 text-sm md:text-base rounded-md hover:bg-gray-200">Celebrity</button>
+                <button data-category="Gaming" class="category-btn px-3 py-2 text-sm md:text-base rounded-md hover:bg-gray-200">Gaming</button>
+                <div class="relative group ml-auto">
+                    <button class="px-3 py-2 flex items-center text-sm md:text-base rounded-md hover:bg-gray-200">
+                        <span>Sources</span>
+                        <i class="fas fa-chevron-down ml-1"></i>
+                    </button>
+                    <div id="sources-dropdown" class="absolute hidden right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-10 p-2">
+                        <!-- Sources will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-6">
+        <div id="loading-indicator" class="flex justify-center items-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+        </div>
+
+        <!-- Breaking News Banner -->
+        <div id="breaking-banner" class="hidden">
+            <div class="bg-red-500 text-white px-4 py-3 mb-6 rounded-md flex items-center">
+                <i class="fas fa-exclamation-circle text-xl mr-3"></i>
+                <div class="font-bold text-lg">BREAKING NEWS</div>
+                <div id="breaking-headline" class="ml-4"></div>
+                <a id="breaking-link" href="#" target="_blank" class="ml-auto text-white hover:text-gray-200">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+            </div>
+        </div>
+
+        <div id="results-info" class="text-gray-600 mb-4 hidden">
+            Showing <span id="results-count">0</span> results
+        </div>
+
+        <div id="news-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Articles will be populated here -->
+        </div>
+
+        <div id="pagination" class="mt-8 flex justify-center hidden">
+            <button id="prev-page" class="px-4 py-2 bg-gray-200 rounded-l-md hover:bg-gray-300 disabled:opacity-50">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div id="page-info" class="px-4 py-2 bg-white">Page <span id="current-page">1</span> of <span id="total-pages">1</span></div>
+            <button id="next-page" class="px-4 py-2 bg-gray-200 rounded-r-md hover:bg-gray-300 disabled:opacity-50">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </main>
+
+    <!-- API Modal -->
+    <div id="api-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg w-full max-w-4xl max-h-screen overflow-y-auto p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">API Documentation</h2>
+                <button id="close-modal" class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="prose max-w-none">
+                <p>Use our API to access entertainment news programmatically. All endpoints return JSON.</p>
+                
+                <h3>Base URL</h3>
+                <pre class="bg-gray-100 p-2 rounded"><code id="base-url"></code></pre>
+                
+                <h3>Endpoints</h3>
+                
+                <h4>GET /rss</h4>
+                <p>Get the latest entertainment news with filtering options.</p>
+                <p>Query parameters:</p>
+                <ul>
+                    <li><code>source</code> - Filter by news source</li>
+                    <li><code>category</code> - Filter by category</li>
+                    <li><code>sentiment</code> - Filter by sentiment (positive, negative, neutral)</li>
+                    <li><code>breaking</code> - Show only breaking news (true/false)</li>
+                    <li><code>q</code> - Search in title and summary</li>
+                    <li><code>sort</code> - Sort by date or trending</li>
+                    <li><code>page</code> - Page number for pagination</li>
+                    <li><code>size</code> - Number of results per page (max 100)</li>
+                </ul>
+                
+                <h4>GET /trending</h4>
+                <p>Get trending entertainment news.</p>
+                
+                <h4>GET /categories</h4>
+                <p>Get list of available categories.</p>
+                
+                <h4>GET /category/{name}</h4>
+                <p>Get articles by category.</p>
+                
+                <h4>GET /breaking</h4>
+                <p>Get breaking news only.</p>
+                
+                <h4>GET /sources</h4>
+                <p>Get information about news sources.</p>
+                
+                <h4>GET /health</h4>
+                <p>Get system health status.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <h2 class="text-xl font-bold">Entertainment News Hub</h2>
+                    <p class="text-gray-400">Aggregating the latest in entertainment news</p>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-400">
+                        Last updated: <span id="last-updated">Loading...</span>
+                    </div>
+                    <div class="text-sm text-gray-400 mt-1">
+                        Sources: <span id="source-count">0</span> | Articles: <span id="article-count">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Configuration
+        const API_ENDPOINT = window.location.origin;
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentCategory = 'all';
+        let currentSearchQuery = '';
+        
+        // DOM Elements
+        const newsContainer = document.getElementById('news-container');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const breakingBanner = document.getElementById('breaking-banner');
+        const breakingHeadline = document.getElementById('breaking-headline');
+        const breakingLink = document.getElementById('breaking-link');
+        const resultsInfo = document.getElementById('results-info');
+        const resultsCount = document.getElementById('results-count');
+        const paginationEl = document.getElementById('pagination');
+        const currentPageEl = document.getElementById('current-page');
+        const totalPagesEl = document.getElementById('total-pages');
+        const prevPageBtn = document.getElementById('prev-page');
+        const nextPageBtn = document.getElementById('next-page');
+        const lastUpdatedEl = document.getElementById('last-updated');
+        const articleCountEl = document.getElementById('article-count');
+        const sourceCountEl = document.getElementById('source-count');
+        const sourcesDropdown = document.getElementById('sources-dropdown');
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const apiBtn = document.getElementById('api-btn');
+        const apiModal = document.getElementById('api-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const baseUrlEl = document.getElementById('base-url');
+        
+        // Set the base URL for API docs
+        baseUrlEl.textContent = API_ENDPOINT;
+        
+        // API Modal Controls
+        apiBtn.addEventListener('click', () => {
+            apiModal.classList.remove('hidden');
+        });
+        
+        closeModalBtn.addEventListener('click', () => {
+            apiModal.classList.add('hidden');
+        });
+        
+        // Close modal when clicking outside
+        apiModal.addEventListener('click', (e) => {
+            if (e.target === apiModal) {
+                apiModal.classList.add('hidden');
+            }
+        });
+        
+        // Category Buttons
+        document.querySelectorAll('.category-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                // Update active state
+                document.querySelectorAll('.category-btn').forEach(btn => {
+                    btn.classList.remove('bg-purple-600', 'text-white');
+                    btn.classList.add('hover:bg-gray-200');
+                });
+                button.classList.add('bg-purple-600', 'text-white');
+                button.classList.remove('hover:bg-gray-200');
+                
+                // Update current category
+                currentCategory = button.dataset.category;
+                currentPage = 1;
+                
+                // Fetch news
+                fetchNews();
+            });
+        });
+        
+        // Search functionality
+        searchBtn.addEventListener('click', () => {
+            currentSearchQuery = searchInput.value.trim();
+            currentPage = 1;
+            fetchNews();
+        });
+        
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                currentSearchQuery = searchInput.value.trim();
+                currentPage = 1;
+                fetchNews();
+            }
+        });
+        
+        // Pagination controls
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchNews();
+            }
+        });
+        
+        nextPageBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                fetchNews();
+            }
+        });
+        
+        // Fetch sources for dropdown
+        async function fetchSources() {
+            try {
+                const response = await fetch(`${API_ENDPOINT}/sources`);
+                const data = await response.json();
+                
+                // Update source count
+                sourceCountEl.textContent = Object.keys(data.sources).length;
+                
+                // Populate dropdown
+                sourcesDropdown.innerHTML = '';
+                Object.entries(data.sources).forEach(([name, url]) => {
+                    const sourceItem = document.createElement('div');
+                    sourceItem.className = 'px-3 py-2 hover:bg-gray-100 cursor-pointer rounded-md';
+                    sourceItem.textContent = name;
+                    sourceItem.addEventListener('click', () => {
+                        // Set current category to 'all' but filter by source
+                        currentCategory = 'all';
+                        fetchNews(name);
+                        
+                        // Update UI to show All News is selected
+                        document.querySelectorAll('.category-btn').forEach(btn => {
+                            btn.classList.remove('bg-purple-600', 'text-white');
+                            btn.classList.add('hover:bg-gray-200');
+                            if (btn.dataset.category === 'all') {
+                                btn.classList.add('bg-purple-600', 'text-white');
+                                btn.classList.remove('hover:bg-gray-200');
+                            }
+                        });
+                        
+                        // Hide dropdown
+                        sourcesDropdown.classList.add('hidden');
+                    });
+                    sourcesDropdown.appendChild(sourceItem);
+                });
+            } catch (error) {
+                console.error('Error fetching sources:', error);
+            }
+        }
+        
+        // Show/hide sources dropdown
+        document.querySelector('.group button').addEventListener('click', () => {
+            sourcesDropdown.classList.toggle('hidden');
+        });
+        
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.group')) {
+                sourcesDropdown.classList.add('hidden');
+            }
+        });
+        
+        // Format date for display
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
+            
+            if (diffMins < 60) {
+                return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+            } else if (diffHours < 24) {
+                return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+            } else if (diffDays < 7) {
+                return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+        
+        // Create article card
+        function createArticleCard(article) {
+            const card = document.createElement('div');
+            card.className = 'article-card bg-white rounded-lg shadow-md overflow-hidden';
+            if (article.breaking_news) {
+                card.classList.add('breaking-news');
+            }
+            
+            // Prepare image element
+            const imageUrl = article.image_url || '/static/placeholder-news.jpg';
+            
+            // Prepare sentiment badge
+            let sentimentBadge = '';
+            if (article.sentiment === 'positive') {
+                sentimentBadge = '<span class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">Positive</span>';
+            } else if (article.sentiment === 'negative') {
+                sentimentBadge = '<span class="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded">Negative</span>';
+            } else {
+                sentimentBadge = '<span class="bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded">Neutral</span>';
+            }
+            
+            // Prepare categories
+            const categories = article.categories.map(category => 
+                `<span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded">${category}</span>`
+            ).join(' ');
+            
+            card.innerHTML = `
+                <div class="h-48 bg-gray-200 relative">
+                    <img src="${imageUrl}" alt="${article.title}" class="w-full h-full object-cover">
+                    ${article.breaking_news ? '<div class="absolute top-0 left-0 bg-red-600 text-white px-2 py-1 text-xs font-bold">BREAKING</div>' : ''}
+                </div>
+                <div class="p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-sm text-gray-600">${article.source}</div>
+                        <div class="text-xs text-gray-500">${formatDate(article.published_date)}</div>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">${article.title}</h3>
+                    <p class="text-gray-700 text-sm mb-4">${article.summary}</p>
+                    <div class="flex flex-wrap gap-1 mb-3">
+                        ${sentimentBadge}
+                        ${categories}
+                    </div>
+                    <a href="${article.link}" target="_blank" class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2 rounded text-sm">Read More</a>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        // Fetch news articles
+        async function fetchNews(sourceFilter = null) {
+            // Show loading indicator
+            loadingIndicator.classList.remove('hidden');
+            newsContainer.classList.add('hidden');
+            resultsInfo.classList.add('hidden');
+            paginationEl.classList.add('hidden');
+            
+            try {
+                let endpoint;
+                let url;
+                
+                switch (currentCategory) {
+                    case 'trending':
+                        endpoint = '/trending';
+                        url = `${API_ENDPOINT}${endpoint}`;
+                        break;
+                    case 'breaking':
+                        endpoint = '/breaking';
+                        url = `${API_ENDPOINT}${endpoint}`;
+                        break;
+                    case 'all':
+                        endpoint = '/rss';
+                        url = `${API_ENDPOINT}${endpoint}?page=${currentPage}`;
+                        if (sourceFilter) {
+                            url += `&source=${encodeURIComponent(sourceFilter)}`;
+                        }
+                        if (currentSearchQuery) {
+                            url += `&q=${encodeURIComponent(currentSearchQuery)}`;
+                        }
+                        break;
+                    default:
+                        endpoint = `/category/${currentCategory}`;
+                        url = `${API_ENDPOINT}${endpoint}`;
+                        break;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                // Clear container
+                newsContainer.innerHTML = '';
+                
+                // Update breaking news banner
+                const breakingNews = data.articles.find(article => article.breaking_news);
+                if (breakingNews) {
+                    breakingHeadline.textContent = breakingNews.title;
+                    breakingLink.href = breakingNews.link;
+                    breakingBanner.classList.remove('hidden');
+                } else {
+                    breakingBanner.classList.add('hidden');
+                }
+                
+                // Update results info
+                resultsCount.textContent = data.count || data.total_results || data.articles.length;
+                resultsInfo.classList.remove('hidden');
+                
+                // Update last updated time
+                lastUpdatedEl.textContent = data.timestamp;
+                
+                // Update article count
+                articleCountEl.textContent = data.count || data.total_results || data.articles.length;
+                
+                // Create article cards
+                data.articles.forEach(article => {
+                    const card = createArticleCard(article);
+                    newsContainer.appendChild(card);
+                });
+                
+                // Update pagination if available
+                if (data.total_pages) {
+                    totalPages = data.total_pages;
+                    currentPageEl.textContent = currentPage;
+                    totalPagesEl.textContent = totalPages;
+                    
+                    prevPageBtn.disabled = currentPage <= 1;
+                    nextPageBtn.disabled = currentPage >= totalPages;
+                    
+                    paginationEl.classList.remove('hidden');
+                } else {
+                    paginationEl.classList.add('hidden');
+                }
+                
+                // Hide loading indicator, show content
+                loadingIndicator.classList.add('hidden');
+                newsContainer.classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Error fetching news:', error);
+                loadingIndicator.classList.add('hidden');
+                newsContainer.innerHTML = `
+                    <div class="col-span-3 text-center py-12">
+                        <div class="text-red-500 text-4xl mb-4"><i class="fas fa-exclamation-circle"></i></div>
+                        <h3 class="text-xl font-bold mb-2">Error Loading News</h3>
+                        <p class="text-gray-600">Sorry, we couldn't load the latest news. Please try again later.</p>
+                    </div>
+                `;
+                newsContainer.classList.remove('hidden');
+            }
+        }
+        
+        // Initialize
+        async function initialize() {
+            // Fetch sources first
+            await fetchSources();
+            
+            // Then fetch news
+            await fetchNews();
+            
+            // Set up periodic refresh (every 30 seconds)
+            setInterval(fetchNews, 30000);
+        }
+        
+        // Start the app
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>
