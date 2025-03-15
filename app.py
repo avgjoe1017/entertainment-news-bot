@@ -780,11 +780,6 @@ def get_health():
     
     return jsonify(status)
 
-@app.route('/', methods=['GET'])
-def index():
-    """Root endpoint now serves the web interface"""
-    return render_template('index.html')
-
 @app.route('/api', methods=['GET'])
 def api_docs():
     """API documentation endpoint"""
@@ -794,9 +789,6 @@ def api_docs():
         'updated_every': '15 seconds',
         'endpoints': {
             '/rss': {
-                'description': 'Get the latest entertainment news with filtering options',
-                'parameters': {
-                    ''/rss': {
                 'description': 'Get the latest entertainment news with filtering options',
                 'parameters': {
                     'source': 'Filter by news source',
@@ -809,6 +801,14 @@ def api_docs():
                     'size': 'Number of results per page (max 100)'
                 }
             },
+            '/trending': 'Get trending entertainment news',
+            '/categories': 'Get list of available categories',
+            '/category/{name}': 'Get articles by category',
+            '/breaking': 'Get breaking news only',
+            '/sources': 'Get information about news sources',
+            '/health': 'Get system health status'
+        }
+    })
             '/trending': 'Get trending entertainment news',
             '/categories': 'Get list of available categories',
             '/category/{name}': 'Get articles by category',
