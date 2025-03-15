@@ -1,1 +1,12 @@
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+  <!-- Background -->
+  <rect width="800" height="400" fill="#f3f4f6"/>
+  
+  <!-- Newspaper icon -->
+  <g transform="translate(350, 150) scale(0.15)">
+    <path d="M544 224h-192v-64c0-35.3 28.7-64 64-64h128c35.3 0 64 28.7 64 64v192c0 35.3-28.7 64-64 64h-192v-64c0-35.3 28.7-64 64-64h128c35.3 0 64-28.7 64-64v-64zm-256 0h-64c-35.3 0-64 28.7-64 64v192c0 35.3 28.7 64 64 64h320c35.3 0 64-28.7 64-64v-64h-192c-35.3 0-64-28.7-64-64v-128zm-64-128c-35.3 0-64 28.7-64 64v64c0 35.3 28.7 64 64 64h192v-192c0-35.3-28.7-64-64-64h-128z" fill="#9ca3af"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="400" y="250" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="#6b7280">No Image Available</text>
+</svg>
