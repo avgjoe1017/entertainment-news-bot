@@ -498,6 +498,8 @@ def update_feeds():
             logger.error(f"Error in update thread: {str(e)}")
             time.sleep(15)  # Sleep and try again even if there's an error
 
+# Fix the response structure in the API endpoints
+
 @app.route('/rss', methods=['GET'])
 def get_rss():
     """API endpoint to get the latest RSS feed data with filtering options"""
@@ -547,12 +549,21 @@ def get_rss():
     
     # Calculate total results and pages
     total_results = len(filtered_articles)
-    total_pages = (total_results + page_size - 1) // page_size
+    total_pages = max(1, (total_results + page_size - 1) // page_size)
     
     # Apply pagination
     start_idx = (page - 1) * page_size
     end_idx = start_idx + page_size
     paginated_articles = filtered_articles[start_idx:end_idx]
+    
+    # Make sure articles are fully populated
+    for article in paginated_articles:
+        # Ensure categories is always a list
+        if 'categories' not in article:
+            article['categories'] = ["General"]
+        # Ensure breaking_news is always present
+        if 'breaking_news' not in article:
+            article['breaking_news'] = False
     
     return jsonify({
         'status': 'success',
@@ -572,12 +583,20 @@ def get_trending():
     with cache_lock:
         current_trending = trending_cache.copy()
     
+    # Make sure articles are fully populated
+    for article in current_trending:
+        # Ensure categories is always a list
+        if 'categories' not in article:
+            article['categories'] = ["General"]
+        # Ensure breaking_news is always present
+        if 'breaking_news' not in article:
+            article['breaking_news'] = False
+    
     return jsonify({
         'status': 'success',
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'count': len(current_trending),
-        'articles': current_trending
-    })
+        'articles
 
 @app.route('/categories', methods=['GET'])
 def get_categories():
