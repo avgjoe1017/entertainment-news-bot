@@ -691,7 +691,7 @@ def api_docs():
         }
     })
 
- __name__ == '__main__':
+if __name__ == '__main__':
     # Start the feed updater in a background thread
     start_background_thread()
     
