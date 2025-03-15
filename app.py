@@ -14,7 +14,6 @@ from flask import Flask, jsonify, request, render_template, send_from_directory
 from flask_cors import CORS
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-from redis import Redis
 from collections import Counter
 
 # Configure logging
@@ -40,6 +39,7 @@ redis_client = None
 try:
     redis_url = os.environ.get('REDIS_URL')
     if redis_url:
+        from redis import Redis
         redis_client = Redis.from_url(redis_url, decode_responses=True)
         logging.info("Redis connection established")
     else:
@@ -691,16 +691,33 @@ def api_docs():
         }
     })
 
-if __name__ == '__main__':
+def start_background_thread():
+    """Start the background thread for feed updates"""
+    thread = threading.Thread(target=update_feeds, daemon=True)
+    thread.start()
+    logger.info("Background update thread started")
+
+def initialize_app():
+    """Initialize the application"""
+    # Set start time for uptime tracking
+    app.start_time = datetime.now()
+    
+    # Create the static directory if it doesn't exist
+    os.makedirs('static', exist_ok=True)
+    
+    # Create the templates directory if it doesn't exist
+    os.makedirs('templates', exist_ok=True)
+    
     # Start the feed updater in a background thread
     start_background_thread()
-    
+
+# Initialize the app when the module is loaded
+initialize_app()
+
+if __name__ == '__main__':
     # Determine the port to use (for Render.com compatibility)
     port = int(os.environ.get('PORT', 5000))
     
     # Start the Flask server
     logger.info(f"Starting Flask application on port {port}")
     app.run(host='0.0.0.0', port=port)
-else:
-    # For WSGI servers (gunicorn etc.) in production
-    start_background_thread()
