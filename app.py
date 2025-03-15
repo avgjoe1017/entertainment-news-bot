@@ -809,14 +809,6 @@ def api_docs():
             '/health': 'Get system health status'
         }
     })
-            '/trending': 'Get trending entertainment news',
-            '/categories': 'Get list of available categories',
-            '/category/{name}': 'Get articles by category',
-            '/breaking': 'Get breaking news only',
-            '/sources': 'Get information about news sources',
-            '/health': 'Get system health status'
-        }
-    })
 
 def start_background_thread():
     """Start the background thread for feed updates"""
