@@ -596,7 +596,9 @@ def get_trending():
         'status': 'success',
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'count': len(current_trending),
-        'articles
+        'articles': current_trending
+    })
+
 
 @app.route('/categories', methods=['GET'])
 def get_categories():
@@ -620,6 +622,15 @@ def get_category(category):
         else:
             articles = []
     
+    # Make sure articles are fully populated
+    for article in articles:
+        # Ensure categories is always a list
+        if 'categories' not in article:
+            article['categories'] = [category]
+        # Ensure breaking_news is always present
+        if 'breaking_news' not in article:
+            article['breaking_news'] = False
+    
     return jsonify({
         'status': 'success',
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -635,6 +646,12 @@ def get_breaking():
     
     with cache_lock:
         breaking_articles = [a for a in feed_cache if a.get('breaking_news', False)]
+    
+    # Make sure articles are fully populated
+    for article in breaking_articles:
+        # Ensure categories is always a list
+        if 'categories' not in article:
+            article['categories'] = ["General"]
     
     return jsonify({
         'status': 'success',
