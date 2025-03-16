@@ -1,3 +1,9 @@
+# Import custom utilities
+from utils.rss_fetcher import fetch_rss_feed
+from utils.sentiment_analysis import calculate_sentiment
+from utils.categorization import detect_categories, is_breaking_news, generate_article_hash, extract_image_url
+from utils.trending import update_trending_score
+
 import os
 import time
 import re
